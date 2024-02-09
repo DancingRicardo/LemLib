@@ -21,13 +21,14 @@ auto leftBottomMotors = lemlib::makeMotorGroup({-12, -13}, pros::v5::MotorGears:
 // right motors on ports 2, 11, and 13. Motor on port 13 is reversed. Using blue gearbox
 auto rightBottomMotors = lemlib::makeMotorGroup({4, 3}, pros::v5::MotorGears::blue);
 
+pros::Motor leftTestMotor(11);
 pros::Imu imu(10);
 
 pros::Motor intakeMotor(9);
 pros::Motor flywheelMotor(7);
 
 pros::adi::DigitalOut horizLeftFlap('A');
-pros::adi::DigitalOut horizRightFlap('B');
+pros::adi::DigitalOut horizRightFlap('D');
 pros::adi::DigitalOut vertLeftFlap('C');
 pros::adi::DigitalOut vertRightFlap('H');
 
@@ -116,61 +117,15 @@ void driveTo(float distance) {
 
 
 void threeBall() {
-    /*======================== grab acorn under bar */
 
-    leftBottomMotors->move_voltage(3000);
-    rightBottomMotors->move_voltage(3000);
-    leftPTOMotors->move_voltage(3000);
-    rightPTOMotors->move_voltage(3000);
-
-    pros::delay(500);
-
-    leftBottomMotors->move_voltage(0);
-    rightBottomMotors->move_voltage(0);
-    leftPTOMotors->move_voltage(0);
-    rightPTOMotors->move_voltage(0);
-
-    /*======================== go backwards halfway*/
-
-    leftBottomMotors->move_voltage(-5500);
-    rightBottomMotors->move_voltage(-6000);
-    leftPTOMotors->move_voltage(-5500);
-    rightPTOMotors->move_voltage(-6000);
-
-    pros::delay(2000);
-
-    leftBottomMotors->move_voltage(0);
-    rightBottomMotors->move_voltage(0);
-    leftPTOMotors->move_voltage(0);
-    rightPTOMotors->move_voltage(0);
-
-    pros::delay(500);
-
-    /*========================*/
-
-    turnTo(-20);
-
-    /*========================*/
-
-    leftBottomMotors->move_voltage(-9000);
-    rightBottomMotors->move_voltage(-9000);
-    leftPTOMotors->move_voltage(-9000);
-    rightPTOMotors->move_voltage(-9000);
-
-    pros::delay(3000);
-
-    leftBottomMotors->move_voltage(0);
-    rightBottomMotors->move_voltage(0);
-    leftPTOMotors->move_voltage(0);
-    rightPTOMotors->move_voltage(0);
-}
-
-void sixBall() {
+    ptoLeft.set_value(true);
+    ptoRight.set_value(true);
 
     // Intake acorn under bar
 
-    intakeMotor.move(127);
+    intakeMotor.move(65);
     driveTo(6);
+    pros::delay(500);
     intakeMotor.move(0);
 
     // Back up
@@ -179,29 +134,152 @@ void sixBall() {
 
     // Extend back flap, turn to face goal
 
-    vertLeftFlap.set_value(false);
+    vertRightFlap.set_value(true);
+    vertRightFlap.set_value(true);
     turnTo(-40);
 
     // Drive to goal to push 2 acorns in
 
-    driveTo(-12);
-    turnTo(-30);
-    driveTo(-12);
-    turnTo(-20);
-    driveTo(-24);
+    driveTo(-14);
+    turnTo(-35);
+    driveTo(-16);
+    vertLeftFlap.set_value(false);
+    vertRightFlap.set_value(false);
+    //turnTo(-20);
+    
+    
+    leftBottomMotors->move_voltage(-12000);
+    rightBottomMotors->move_voltage(-12000);
+    leftPTOMotors->move_voltage(-12000);
+    rightPTOMotors->move_voltage(-12000);
+
+    pros::delay(2000);
+
+    leftBottomMotors->move_voltage(0);
+    rightBottomMotors->move_voltage(0);
+    leftPTOMotors->move_voltage(0);
+    rightPTOMotors->move_voltage(0);
 
     // Go out of goal, preparing to turn to score intaked acorn
 
-    vertLeftFlap.set_value(true);
-    driveTo(7);
+    driveTo(16);
     
     // Turn to goal
 
-    turnTo(180);
+    turnTo(-170);
+    intakeMotor.move(-127);
+
+    // Score acorn, drive out of goal repeadetly
+
+    leftBottomMotors->move_voltage(12000);
+    rightBottomMotors->move_voltage(12000);
+    leftPTOMotors->move_voltage(12000);
+    rightPTOMotors->move_voltage(12000);
+
+    pros::delay(2000);
+
+    leftBottomMotors->move_voltage(0);
+    rightBottomMotors->move_voltage(0);
+    leftPTOMotors->move_voltage(0);
+    rightPTOMotors->move_voltage(0);
+
+    driveTo(-16);
+
+    leftBottomMotors->move_voltage(12000);
+    rightBottomMotors->move_voltage(12000);
+    leftPTOMotors->move_voltage(12000);
+    rightPTOMotors->move_voltage(12000);
+
+    pros::delay(2000);
+
+    leftBottomMotors->move_voltage(0);
+    rightBottomMotors->move_voltage(0);
+    leftPTOMotors->move_voltage(0);
+    rightPTOMotors->move_voltage(0);
+
+    driveTo(-16);
+
+    leftBottomMotors->move_voltage(12000);
+    rightBottomMotors->move_voltage(12000);
+    leftPTOMotors->move_voltage(12000);
+    rightPTOMotors->move_voltage(12000);
+
+    pros::delay(2000);
+
+    leftBottomMotors->move_voltage(0);
+    rightBottomMotors->move_voltage(0);
+    leftPTOMotors->move_voltage(0);
+    rightPTOMotors->move_voltage(0);
+
+    driveTo(-16);
+}
+
+void sixBall() {
+
+    ptoLeft.set_value(true);
+    ptoRight.set_value(true);
+
+    // Intake acorn under bar
+
+    intakeMotor.move(65);
+    driveTo(6);
+    pros::delay(500);
+    intakeMotor.move(0);
+
+    // Back up
+
+    driveTo(-40);
+
+    // Extend back flap, turn to face goal
+
+    vertRightFlap.set_value(true);
+    vertRightFlap.set_value(true);
+    turnTo(-40);
+
+    // Drive to goal to push 2 acorns in
+
+    driveTo(-14);
+    turnTo(-25);
+    vertLeftFlap.set_value(false);
+    vertRightFlap.set_value(false);
+    driveTo(-16);
+    turnTo(-10);
+    
+    
+    leftBottomMotors->move_voltage(-12000);
+    rightBottomMotors->move_voltage(-12000);
+    leftPTOMotors->move_voltage(-12000);
+    rightPTOMotors->move_voltage(-12000);
+
+    pros::delay(2000);
+
+    leftBottomMotors->move_voltage(0);
+    rightBottomMotors->move_voltage(0);
+    leftPTOMotors->move_voltage(0);
+    rightPTOMotors->move_voltage(0);
+
+    // Go out of goal, preparing to turn to score intaked acorn
+
+    driveTo(24);
+    
+    // Turn to goal
+
+    turnTo(-150);
 
     // Score acorn, drive out of goal
 
-    driveTo(24);
+    leftBottomMotors->move_voltage(12000);
+    rightBottomMotors->move_voltage(12000);
+    leftPTOMotors->move_voltage(12000);
+    rightPTOMotors->move_voltage(12000);
+
+    pros::delay(2000);
+
+    leftBottomMotors->move_voltage(0);
+    rightBottomMotors->move_voltage(0);
+    leftPTOMotors->move_voltage(0);
+    rightPTOMotors->move_voltage(0);
+
     driveTo(-16);
 
     // Turn towards leftmost acorn
@@ -217,7 +295,7 @@ void sixBall() {
     // Turn towards goal, outtake
 
     intakeMotor.move(0);
-    turnTo(35);
+    turnTo(135);
     intakeMotor.move(-90);
     pros::delay(500);
     intakeMotor.move(0);
@@ -320,6 +398,31 @@ void skillsAuton() {
 
 }
 
+void closeSideAuton() {
+
+    ptoLeft.set_value(true);
+    ptoRight.set_value(true);
+
+    vertRightFlap.set_value(true);
+    vertRightFlap.set_value(true);
+
+    pros::delay(500);
+
+    turnTo(-90);
+
+    vertRightFlap.set_value(false);
+    vertRightFlap.set_value(false);
+
+    turnTo(45);
+
+    driveTo(-16);
+
+    turnTo(-50);
+
+    driveTo(-30);
+
+
+}
 /**
  * Runs initialization code. This occurs as soon as the program is started.
  *
@@ -330,6 +433,7 @@ void initialize() {
     pros::lcd::initialize(); // initialize brain screen
     imu.reset(true);
 }
+
 
 /**
  * Runs while the robot is disabled
@@ -355,7 +459,11 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
 
     //driveTo(48);
     
-    sixBall();
+    //sixBall();
+
+    threeBall();
+
+    //closeSideAuton();
 
     // skillsAuton();
  }
@@ -367,25 +475,61 @@ void opcontrol() {
     // controller
     // loop to continuously update motors
 
+    //leftPTOMotors->set_zero_position_all(0);
+    
+    graphy::AsyncGrapher grapher("Lift PID", 20);
+
+    grapher.addDataType("Actual Yaw", pros::c::COLOR_CYAN);
+    grapher.addDataType("Target Yaw", pros::c::COLOR_RED);
+    grapher.addDataType("Voltage", pros::c::COLOR_YELLOW);
+
     static bool isLifted = false;
+    static bool wentUp = false;
+
+    static bool l1Pressed = false;
+    static bool l1State = false;
+
+    static bool l2Pressed = false;
+    static bool l2State = false;
+    
+    static bool aPressed = false;
+    static bool aState = false;
+    
+    lemlib::FAPID liftPID(.0175, 0, 0, 0, 0, "Drive PID"); // 2000
+
+    grapher.startTask();
+
     while (true) {
 
         /*=================*/
 
-        if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
+        if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L1) && !l1Pressed && !l1State) {
             horizLeftFlap.set_value(true);
             horizRightFlap.set_value(true);
-        } else {
+            l1Pressed = true;
+            l1State = true;
+        } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L1) && !l1Pressed && l1State) {
             horizLeftFlap.set_value(false);
             horizRightFlap.set_value(false);
+            l1Pressed = true;
+            l1State = false;
+        } else if (!controller.get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
+            l1Pressed = false;
         }
 
-        if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
+        if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2) && !l2Pressed && !l2State) {
             vertLeftFlap.set_value(true);
             vertRightFlap.set_value(true);
-        } else {
+            l2Pressed = true;
+            l2State = true;
+        } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2) && !l2Pressed && l2State) {
             vertLeftFlap.set_value(false);
             vertRightFlap.set_value(false);
+            l2Pressed = true;
+            l2State = false;
+        }
+        else if (!controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
+            l2Pressed = false;
         }
 
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
@@ -402,12 +546,7 @@ void opcontrol() {
             flywheelMotor.move_velocity(0);
         }
 
-        if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_LEFT)) {
-            ptoLeft.set_value(false);
-            ptoRight.set_value(false);
-            isLifted = true;
-        }   
-        else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_RIGHT)) {
+        if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_RIGHT)) {
             ptoLeft.set_value(true);
             ptoRight.set_value(true);
             isLifted = false;
@@ -417,13 +556,57 @@ void opcontrol() {
         // get joystick positions
         int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
         int rightY = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y);
-        
-        if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP) && isLifted) {
+
+        if (!controller.get_digital(pros::E_CONTROLLER_DIGITAL_DOWN) && isLifted && wentUp) {
+            float targetPosition = 360;
+            float motorVoltage = liftPID.update(targetPosition, 0);
+            leftPTOMotors->move(-motorVoltage);
+            rightPTOMotors->move(-motorVoltage);
+
+            if (motorVoltage > 127) {
+                motorVoltage = 127;
+            }
+            else if (motorVoltage < - 127) {
+            motorVoltage = -127;
+            }
+
+            grapher.update("Actual Yaw", (leftPTOMotors->get_position()) / (targetPosition * 2));
+            grapher.update("Target Yaw", (targetPosition / (targetPosition * 2)));
+            grapher.update("Voltage", (motorVoltage / 127));
+
+        }
+        else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP) && !isLifted) {
+            
+            ptoLeft.set_value(false);
+            ptoRight.set_value(false);
+            isLifted = true;
+
             leftPTOMotors->move(-127);
             rightPTOMotors->move(-127);
-        } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_DOWN) && isLifted) {
+            
+            float start = pros::millis();
+
+            // get joystick positions
+            int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
+            int rightY = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y);
+
+            while (pros::millis() < start + 1000) {
+                leftBottomMotors->move(leftY);
+                rightBottomMotors->move(rightY);
+
+            }
+
+            leftPTOMotors->move(0);
+            rightPTOMotors->move(0);
+
+            wentUp = true;
+
+        }         
+        else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_DOWN) && isLifted) {
             leftPTOMotors->move(127);
             rightPTOMotors->move(127);
+
+            wentUp = false;
         }
         else if (!isLifted) {
             leftPTOMotors->move(leftY);
