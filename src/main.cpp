@@ -35,6 +35,8 @@ pros::adi::DigitalOut vertRightFlap('H');
 pros::adi::DigitalOut ptoLeft('E');
 pros::adi::DigitalOut ptoRight('F');
 
+pros::adi::DigitalOut lockingMech('C');
+
 void turnTo(float degree) {
 
     lemlib::FAPID turnPID(0, 0, 315, 0, 190, "Turn PID");
@@ -577,10 +579,16 @@ void opcontrol() {
         }
         else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP) && !isLifted) {
             
+            lockingMech.set_value(true);
             ptoLeft.set_value(false);
             ptoRight.set_value(false);
             isLifted = true;
 
+            leftPTOMotors->move(-30);
+            rightPTOMotors->move(-30);
+
+            pros::delay(150);
+            
             leftPTOMotors->move(-127);
             rightPTOMotors->move(-127);
             
