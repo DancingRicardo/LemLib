@@ -29,7 +29,7 @@ pros::Motor flywheelMotor(7);
 
 pros::adi::DigitalOut horizLeftFlap('A');
 pros::adi::DigitalOut horizRightFlap('D');
-pros::adi::DigitalOut vertLeftFlap('C');
+pros::adi::DigitalOut vertLeftFlap('H');
 pros::adi::DigitalOut vertRightFlap('H');
 
 pros::adi::DigitalOut ptoLeft('E');
@@ -44,7 +44,7 @@ void turnTo(float degree) {
     // Large error and small error are the ranges where the loop can exit. Small is the important one.
     // Large and small times are for how long the bot must be within the range to exit. Max Time is
     // the time it takes for the bot to give up on the PID loop and exit.
-    turnPID.setExit(1, .5, 900, 400, 3000);
+    turnPID.setExit(1, .5, 500, 300, 3000);
 
     float targetDistance = degree + imu.get_rotation();
 
@@ -73,8 +73,8 @@ void driveTo(float distance) {
     // Large error and small error are the ranges where the loop can exit. Small is the important one.
     // Large and small times are for how long the bot must be within the range to exit. Max Time is
     // the time it takes for the bot to give up on the PID loop and exit.
-    drivePID.setExit(3, .1, 1000, 500, 5000);
-    straightPID.setExit(1, .5, 900, 400, 5000);
+    drivePID.setExit(3, .1, 500, 300, 3000);
+    straightPID.setExit(1, .5, 900, 400, 3000);
     float targetDistance = distance;
     float startDegree = imu.get_yaw();
 
@@ -125,10 +125,10 @@ void threeBall() {
 
     // Intake acorn under bar
 
-    intakeMotor.move(65);
+    intakeMotor.move(127);
     driveTo(6);
     pros::delay(500);
-    intakeMotor.move(0);
+    
 
     // Back up
 
@@ -144,6 +144,7 @@ void threeBall() {
 
     driveTo(-14);
     turnTo(-35);
+    intakeMotor.move(0);
     driveTo(-16);
     vertLeftFlap.set_value(false);
     vertRightFlap.set_value(false);
@@ -168,7 +169,7 @@ void threeBall() {
     
     // Turn to goal
 
-    turnTo(-170);
+    turnTo(-160);
     intakeMotor.move(-127);
 
     // Score acorn, drive out of goal repeadetly
@@ -463,9 +464,11 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
     
     //sixBall();
 
-    threeBall();
-
-    //closeSideAuton();
+    //threeBall();
+    
+    //flywheelMotor.move(127);
+    
+    closeSideAuton();
 
     // skillsAuton();
  }
@@ -478,6 +481,9 @@ void opcontrol() {
     // loop to continuously update motors
 
     //leftPTOMotors->set_zero_position_all(0);
+
+    ptoLeft.set_value(true);
+    ptoRight.set_value(true);
     
     graphy::AsyncGrapher grapher("Lift PID", 20);
 
@@ -494,12 +500,14 @@ void opcontrol() {
     static bool l2Pressed = false;
     static bool l2State = false;
     
-    static bool aPressed = false;
-    static bool aState = false;
+    static bool lockPressed = false;
+    static bool lockState = false;
     
     lemlib::FAPID liftPID(.0175, 0, 0, 0, 0, "Drive PID"); // 2000
 
     grapher.startTask();
+
+    lockingMech.set_value(true);
 
     while (true) {
 
@@ -577,9 +585,9 @@ void opcontrol() {
             grapher.update("Voltage", (motorVoltage / 127));
 
         }
-        else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP) && !isLifted) {
+        else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP) && (!wentUp || isLifted)) {
             
-            lockingMech.set_value(true);
+            //lockingMech.set_value(true);
             ptoLeft.set_value(false);
             ptoRight.set_value(false);
             isLifted = true;
@@ -613,8 +621,8 @@ void opcontrol() {
         else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_DOWN) && isLifted) {
             leftPTOMotors->move(127);
             rightPTOMotors->move(127);
-
             wentUp = false;
+
         }
         else if (!isLifted) {
             leftPTOMotors->move(leftY);
@@ -626,6 +634,24 @@ void opcontrol() {
         
         }
 
+        if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP)) {
+            ptoLeft.set_value(false);
+            ptoRight.set_value(false);
+            isLifted = true;
+        }
+
+
+        if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_B) && !lockPressed && !lockState) {
+            lockingMech.set_value(true);
+            lockPressed = true;
+            lockState = true;
+        } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_B) && !lockPressed && lockState) {
+            lockingMech.set_value(false);
+            lockPressed = true;
+            lockState = false;
+        } else if (!controller.get_digital(pros::E_CONTROLLER_DIGITAL_B)) {
+            lockPressed = false;
+        }
 
         /*===== DRIVE =====*/
 
