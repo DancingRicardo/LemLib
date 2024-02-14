@@ -94,14 +94,14 @@ void driveTo(float distance) {
         // Update the PID loop and get the motor voltage
 
         float currentDistanceTraveled = ((leftBottomMotors->get_position(0) + rightBottomMotors->get_position()) / 2) *
-                                        3.14159265 / 180 * 1.625 * .75;
+                                        3.14159265 / 180 * 1.375 * .75;
 
         float motorVoltage = drivePID.update(targetDistance, currentDistanceTraveled);
-        float straightVoltage = straightPID.update(startDegree, imu.get_yaw());
+        float straightVoltage = straightPID.update(startDegree, imu.get_rotation());
 
         if (motorVoltage > 12000) motorVoltage = 12000;
 
-        grapher.update("Actual Yaw", (imu.get_yaw()) / (startDegree * 2));
+        grapher.update("Actual Yaw", (imu.get_rotation()) / (startDegree * 2));
         grapher.update("Target Yaw", (startDegree / (startDegree * 2)));
         grapher.update("Voltage", (straightVoltage / 12000));
 
@@ -333,6 +333,7 @@ void sixBall() {
 
 }
 
+
 void skillsAuton() {
 
     // Matchload for 35 seconds
@@ -426,6 +427,69 @@ void closeSideAuton() {
 
 
 }
+
+void fourBallCloseSide() {
+
+    ptoLeft.set_value(true);
+    ptoRight.set_value(true);
+    
+    vertRightFlap.set_value(true);
+    vertRightFlap.set_value(true);
+
+    pros::delay(500);
+
+    turnTo(-90);
+
+    vertRightFlap.set_value(false);
+    vertRightFlap.set_value(false);
+
+    turnTo(110);
+
+    // Mid Ball Rush
+
+    intakeMotor.move(127);
+    driveTo(48);
+    driveTo(-2);
+
+    // Turn to other side of field
+
+    turnTo(70);
+
+    // Push balls over barrier
+    
+    horizLeftFlap.set_value(true);
+    horizRightFlap.set_value(true);
+    intakeMotor.move(-127);
+    driveTo(24);
+
+    // Turn back to matchload bar
+
+    horizLeftFlap.set_value(false);
+    horizRightFlap.set_value(false);
+    driveTo(-12);
+    turnTo(130);
+
+    // Go to matchload bar
+
+    driveTo(48);
+
+    turnTo(45);
+
+    // Regular close side
+
+    turnTo(45);
+
+    driveTo(-16);
+
+    turnTo(-50);
+
+    driveTo(-30);
+
+
+
+}
+
+
 /**
  * Runs initialization code. This occurs as soon as the program is started.
  *
@@ -466,9 +530,11 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
 
     //threeBall();
     
+    fourBallCloseSide();
+
     //flywheelMotor.move(127);
     
-    closeSideAuton();
+    //closeSideAuton();
 
     // skillsAuton();
  }
