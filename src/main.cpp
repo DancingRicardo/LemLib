@@ -459,7 +459,7 @@ void fourBallCloseSide() {
     
     horizLeftFlap.set_value(true);
     horizRightFlap.set_value(true);
-    intakeMotor.move(-127);
+    intakeMotor.move(127);
     driveTo(24);
 
     // Turn back to matchload bar
@@ -473,17 +473,15 @@ void fourBallCloseSide() {
 
     driveTo(48);
 
-    turnTo(45);
-
     // Regular close side
 
-    turnTo(45);
+    turnTo(-60);
 
-    driveTo(-16);
+    driveTo(24);
 
     turnTo(-50);
 
-    driveTo(-30);
+    driveTo(30);
 
 
 
