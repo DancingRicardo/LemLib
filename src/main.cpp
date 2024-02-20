@@ -44,7 +44,7 @@ void turnTo(float degree) {
     // Large error and small error are the ranges where the loop can exit. Small is the important one.
     // Large and small times are for how long the bot must be within the range to exit. Max Time is
     // the time it takes for the bot to give up on the PID loop and exit.
-    turnPID.setExit(1, .5, 500, 300, 3000);
+    turnPID.setExit(1, .5, 800, 500, 1250);
 
     float targetDistance = degree + imu.get_rotation();
 
@@ -73,10 +73,10 @@ void driveTo(float distance) {
     // Large error and small error are the ranges where the loop can exit. Small is the important one.
     // Large and small times are for how long the bot must be within the range to exit. Max Time is
     // the time it takes for the bot to give up on the PID loop and exit.
-    drivePID.setExit(3, .1, 500, 300, 3000);
+    drivePID.setExit(2, .1, 500, 300, 3000);
     straightPID.setExit(1, .5, 900, 400, 3000);
     float targetDistance = distance;
-    float startDegree = imu.get_yaw();
+    float startDegree = imu.get_rotation();
 
     leftBottomMotors->set_zero_position_all(0);
     rightBottomMotors->set_zero_position_all(0);
@@ -443,7 +443,7 @@ void fourBallCloseSide() {
     vertRightFlap.set_value(false);
     vertRightFlap.set_value(false);
 
-    turnTo(110);
+    turnTo(115);
 
     // Mid Ball Rush
 
@@ -460,7 +460,18 @@ void fourBallCloseSide() {
     horizLeftFlap.set_value(true);
     horizRightFlap.set_value(true);
     intakeMotor.move(127);
-    driveTo(24);
+    
+    leftBottomMotors->move_voltage(12000);
+    rightBottomMotors->move_voltage(12000);
+    leftPTOMotors->move_voltage(12000);
+    rightPTOMotors->move_voltage(12000);
+
+    pros::delay(500);
+
+    leftBottomMotors->move_voltage(0);
+    rightBottomMotors->move_voltage(0);
+    leftPTOMotors->move_voltage(0);
+    rightPTOMotors->move_voltage(0);
 
     // Turn back to matchload bar
 
@@ -475,13 +486,16 @@ void fourBallCloseSide() {
 
     // Regular close side
 
-    turnTo(-60);
-
+    turnTo(-100);
+    
+    intakeMotor.move(-127);
     driveTo(24);
 
-    turnTo(-50);
+    turnTo(-20);
 
-    driveTo(30);
+    //horizLeftFlap.set_value(true);
+    //horizRightFlap.set_value(true);
+    driveTo(12);
 
 
 
