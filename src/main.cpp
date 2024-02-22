@@ -38,7 +38,6 @@ pros::adi::DigitalOut ptoRight('F');
 pros::adi::DigitalOut lockingMech('C');
 
 void turnTo(float degree) {
-
     lemlib::FAPID turnPID(0, 0, 315, 0, 190, "Turn PID");
 
     // Large error and small error are the ranges where the loop can exit. Small is the important one.
@@ -60,11 +59,9 @@ void turnTo(float degree) {
 
         pros::delay(20);
     }
-
 }
 
 void driveTo(float distance) {
-
     graphy::AsyncGrapher grapher("Drive PID", 20);
 
     lemlib::FAPID drivePID(0, 0, 1000, 0, 4750, "Drive PID"); // 2000
@@ -114,12 +111,74 @@ void driveTo(float distance) {
     }
 
     grapher.stopTask();
-
 }
 
+void circleArcTo(float radius, float finalTheta, float trackWidth) {
+    graphy::AsyncGrapher grapher("Drive PID", 20);
+
+    lemlib::FAPID drivePID(0, 0, 1000, 0, 4750, "Drive PID"); // 2000
+    lemlib::FAPID straightPID(0, 0, 150, 0, 300, "Turn PID");
+
+    // Large error and small error are the ranges where the loop can exit. Small is the important one.
+    // Large and small times are for how long the bot must be within the range to exit. Max Time is
+    // the time it takes for the bot to give up on the PID loop and exit.
+    drivePID.setExit(2, .1, 500, 300, 3000);
+    straightPID.setExit(1, .5, 900, 400, 3000);
+
+    float startDegree = imu.get_rotation();
+    float targetDistanceLeft, targetDistanceRight;
+
+    if ((int)startDegree % 360 > 180) {
+        targetDistanceRight = radius * (finalTheta - startDegree);
+        targetDistanceLeft = (radius+trackWidth) * (finalTheta - startDegree);
+    } else {
+        targetDistanceLeft = radius * (finalTheta - startDegree);
+        targetDistanceRight = (radius+trackWidth) * (finalTheta - startDegree);
+    }
+
+    leftBottomMotors->set_zero_position_all(0);
+    rightBottomMotors->set_zero_position_all(0);
+    leftPTOMotors->set_zero_position_all(0);
+    rightPTOMotors->set_zero_position_all(0);
+
+    grapher.addDataType("Actual Yaw", pros::c::COLOR_CYAN);
+    grapher.addDataType("Target Yaw", pros::c::COLOR_RED);
+    grapher.addDataType("Voltage", pros::c::COLOR_YELLOW);
+
+    grapher.startTask();
+
+    while (!drivePID.settled()) { // While the bot is still moving / oscillating
+
+        // Update the PID loop and get the motor voltage
+
+        float currentDistanceTraveledLeft = leftBottomMotors->get_position(0) *
+                                        3.14159265 / 180 * 1.375 * .75;
+
+        float currentDistanceTraveledRight = rightBottomMotors->get_position(0) * 
+                                        3.14159265 / 180 * 1.375 * .75;
+
+        float leftMotorVoltage = drivePID.update(targetDistanceLeft, currentDistanceTraveledLeft);
+        float rightMotorVoltage = drivePID.update(targetDistanceRight, currentDistanceTraveledRight);
+
+        if (leftMotorVoltage > 12000) leftMotorVoltage = 12000;
+        if (rightMotorVoltage > 12000) rightMotorVoltage = 12000;
+
+        grapher.update("Actual Yaw", (imu.get_rotation()) / (startDegree * 2));
+        grapher.update("Target Yaw", (startDegree / (startDegree * 2)));
+        grapher.update("Voltage", (rightMotorVoltage / 12000));
+
+        leftBottomMotors->move_voltage(leftMotorVoltage);
+        rightBottomMotors->move_voltage(rightMotorVoltage);
+        leftPTOMotors->move_voltage(leftMotorVoltage);
+        rightPTOMotors->move_voltage(rightMotorVoltage);
+
+        pros::delay(20);
+    }
+
+    grapher.stopTask();
+}
 
 void threeBall() {
-
     ptoLeft.set_value(true);
     ptoRight.set_value(true);
 
@@ -128,7 +187,6 @@ void threeBall() {
     intakeMotor.move(127);
     driveTo(6);
     pros::delay(500);
-    
 
     // Back up
 
@@ -148,9 +206,8 @@ void threeBall() {
     driveTo(-16);
     vertLeftFlap.set_value(false);
     vertRightFlap.set_value(false);
-    //turnTo(-20);
-    
-    
+    // turnTo(-20);
+
     leftBottomMotors->move_voltage(-12000);
     rightBottomMotors->move_voltage(-12000);
     leftPTOMotors->move_voltage(-12000);
@@ -166,7 +223,7 @@ void threeBall() {
     // Go out of goal, preparing to turn to score intaked acorn
 
     driveTo(16);
-    
+
     // Turn to goal
 
     turnTo(-160);
@@ -218,7 +275,6 @@ void threeBall() {
 }
 
 void sixBall() {
-
     ptoLeft.set_value(true);
     ptoRight.set_value(true);
 
@@ -247,8 +303,7 @@ void sixBall() {
     vertRightFlap.set_value(false);
     driveTo(-16);
     turnTo(-10);
-    
-    
+
     leftBottomMotors->move_voltage(-12000);
     rightBottomMotors->move_voltage(-12000);
     leftPTOMotors->move_voltage(-12000);
@@ -264,7 +319,7 @@ void sixBall() {
     // Go out of goal, preparing to turn to score intaked acorn
 
     driveTo(24);
-    
+
     // Turn to goal
 
     turnTo(-150);
@@ -328,14 +383,9 @@ void sixBall() {
     horizLeftFlap.set_value(false);
     horizRightFlap.set_value(false);
     driveTo(-10);
-
-    
-
 }
 
-
 void skillsAuton() {
-
     // Matchload for 35 seconds
 
     flywheelMotor.move(127);
@@ -393,17 +443,15 @@ void skillsAuton() {
     horizLeftFlap.set_value(true);
     horizRightFlap.set_value(true);
     driveTo(20);
-    
+
     // Back out
 
     horizRightFlap.set_value(false);
     horizLeftFlap.set_value(false);
     driveTo(-20);
-
 }
 
 void closeSideAuton() {
-
     ptoLeft.set_value(true);
     ptoRight.set_value(true);
 
@@ -424,15 +472,12 @@ void closeSideAuton() {
     turnTo(-50);
 
     driveTo(-30);
-
-
 }
 
 void fourBallCloseSide() {
-
     ptoLeft.set_value(true);
     ptoRight.set_value(true);
-    
+
     vertRightFlap.set_value(true);
     vertRightFlap.set_value(true);
 
@@ -456,11 +501,11 @@ void fourBallCloseSide() {
     turnTo(70);
 
     // Push balls over barrier
-    
+
     horizLeftFlap.set_value(true);
     horizRightFlap.set_value(true);
     intakeMotor.move(127);
-    
+
     leftBottomMotors->move_voltage(12000);
     rightBottomMotors->move_voltage(12000);
     leftPTOMotors->move_voltage(12000);
@@ -487,20 +532,16 @@ void fourBallCloseSide() {
     // Regular close side
 
     turnTo(-100);
-    
+
     intakeMotor.move(-127);
     driveTo(24);
 
     turnTo(-20);
 
-    //horizLeftFlap.set_value(true);
-    //horizRightFlap.set_value(true);
+    // horizLeftFlap.set_value(true);
+    // horizRightFlap.set_value(true);
     driveTo(12);
-
-
-
 }
-
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -512,7 +553,6 @@ void initialize() {
     pros::lcd::initialize(); // initialize brain screen
     imu.reset(true);
 }
-
 
 /**
  * Runs while the robot is disabled
@@ -532,24 +572,24 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
  * Runs during auto
  *
  * This is an example autonomous routine which demonstrates a lot of the features LemLib has to offer
- */void autonomous() {
-    
-    //graphy::AsyncGrapher grapher("Drive PID", 20);
+ */
+void autonomous() {
+    // graphy::AsyncGrapher grapher("Drive PID", 20);
 
-    //driveTo(48);
-    
-    //sixBall();
+    // driveTo(48);
 
-    //threeBall();
-    
+    // sixBall();
+
+    // threeBall();
+
     fourBallCloseSide();
 
-    //flywheelMotor.move(127);
-    
-    //closeSideAuton();
+    // flywheelMotor.move(127);
+
+    // closeSideAuton();
 
     // skillsAuton();
- }
+}
 
 /**
  * Runs in driver control
@@ -558,11 +598,11 @@ void opcontrol() {
     // controller
     // loop to continuously update motors
 
-    //leftPTOMotors->set_zero_position_all(0);
+    // leftPTOMotors->set_zero_position_all(0);
 
     ptoLeft.set_value(true);
     ptoRight.set_value(true);
-    
+
     graphy::AsyncGrapher grapher("Lift PID", 20);
 
     grapher.addDataType("Actual Yaw", pros::c::COLOR_CYAN);
@@ -577,10 +617,10 @@ void opcontrol() {
 
     static bool l2Pressed = false;
     static bool l2State = false;
-    
+
     static bool lockPressed = false;
     static bool lockState = false;
-    
+
     lemlib::FAPID liftPID(.0175, 0, 0, 0, 0, "Drive PID"); // 2000
 
     grapher.startTask();
@@ -588,7 +628,6 @@ void opcontrol() {
     lockingMech.set_value(true);
 
     while (true) {
-
         /*=================*/
 
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_L1) && !l1Pressed && !l1State) {
@@ -615,8 +654,7 @@ void opcontrol() {
             vertRightFlap.set_value(false);
             l2Pressed = true;
             l2State = false;
-        }
-        else if (!controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
+        } else if (!controller.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
             l2Pressed = false;
         }
 
@@ -640,7 +678,6 @@ void opcontrol() {
             isLifted = false;
         }
 
-
         // get joystick positions
         int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
         int rightY = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y);
@@ -653,19 +690,16 @@ void opcontrol() {
 
             if (motorVoltage > 127) {
                 motorVoltage = 127;
-            }
-            else if (motorVoltage < - 127) {
-            motorVoltage = -127;
+            } else if (motorVoltage < -127) {
+                motorVoltage = -127;
             }
 
             grapher.update("Actual Yaw", (leftPTOMotors->get_position()) / (targetPosition * 2));
             grapher.update("Target Yaw", (targetPosition / (targetPosition * 2)));
             grapher.update("Voltage", (motorVoltage / 127));
 
-        }
-        else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP) && (!wentUp || isLifted)) {
-            
-            //lockingMech.set_value(true);
+        } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP) && (!wentUp || isLifted)) {
+            // lockingMech.set_value(true);
             ptoLeft.set_value(false);
             ptoRight.set_value(false);
             isLifted = true;
@@ -674,10 +708,10 @@ void opcontrol() {
             rightPTOMotors->move(-30);
 
             pros::delay(150);
-            
+
             leftPTOMotors->move(-127);
             rightPTOMotors->move(-127);
-            
+
             float start = pros::millis();
 
             // get joystick positions
@@ -687,7 +721,6 @@ void opcontrol() {
             while (pros::millis() < start + 1000) {
                 leftBottomMotors->move(leftY);
                 rightBottomMotors->move(rightY);
-
             }
 
             leftPTOMotors->move(0);
@@ -695,21 +728,17 @@ void opcontrol() {
 
             wentUp = true;
 
-        }         
-        else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_DOWN) && isLifted) {
+        } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_DOWN) && isLifted) {
             leftPTOMotors->move(127);
             rightPTOMotors->move(127);
             wentUp = false;
 
-        }
-        else if (!isLifted) {
+        } else if (!isLifted) {
             leftPTOMotors->move(leftY);
             rightPTOMotors->move(rightY);
-        }
-        else {
+        } else {
             leftPTOMotors->move(0);
             rightPTOMotors->move(0);
-        
         }
 
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP)) {
@@ -717,7 +746,6 @@ void opcontrol() {
             ptoRight.set_value(false);
             isLifted = true;
         }
-
 
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_B) && !lockPressed && !lockState) {
             lockingMech.set_value(true);
@@ -735,7 +763,6 @@ void opcontrol() {
 
         leftBottomMotors->move(leftY);
         rightBottomMotors->move(rightY);
-
 
         pros::delay(20);
     }
