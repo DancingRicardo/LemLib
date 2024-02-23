@@ -117,18 +117,16 @@ void circleArcTo(float radius, float finalTheta, float trackWidth) {
     graphy::AsyncGrapher grapher("Drive PID", 20);
 
     lemlib::FAPID drivePID(0, 0, 1000, 0, 4750, "Drive PID"); // 2000
-    lemlib::FAPID straightPID(0, 0, 150, 0, 300, "Turn PID");
 
     // Large error and small error are the ranges where the loop can exit. Small is the important one.
     // Large and small times are for how long the bot must be within the range to exit. Max Time is
     // the time it takes for the bot to give up on the PID loop and exit.
-    drivePID.setExit(2, .1, 500, 300, 3000);
-    straightPID.setExit(1, .5, 900, 400, 3000);
+    drivePID.setExit(2, .1, 500, 300, 6000);
 
-    float startDegree = imu.get_rotation();
+    float startDegree = imu.get_rotation() / 180 * 3.14159265;
     float targetDistanceLeft, targetDistanceRight;
 
-    if ((int)startDegree % 360 > 180) {
+    if (finalTheta > 0) {
         targetDistanceRight = radius * (finalTheta - startDegree);
         targetDistanceLeft = (radius+trackWidth) * (finalTheta - startDegree);
     } else {
@@ -141,8 +139,8 @@ void circleArcTo(float radius, float finalTheta, float trackWidth) {
     leftPTOMotors->set_zero_position_all(0);
     rightPTOMotors->set_zero_position_all(0);
 
-    grapher.addDataType("Actual Yaw", pros::c::COLOR_CYAN);
-    grapher.addDataType("Target Yaw", pros::c::COLOR_RED);
+    grapher.addDataType("Left Dist", pros::c::COLOR_CYAN);
+    grapher.addDataType("Right Dist", pros::c::COLOR_RED);
     grapher.addDataType("Voltage", pros::c::COLOR_YELLOW);
 
     grapher.startTask();
@@ -163,8 +161,8 @@ void circleArcTo(float radius, float finalTheta, float trackWidth) {
         if (leftMotorVoltage > 12000) leftMotorVoltage = 12000;
         if (rightMotorVoltage > 12000) rightMotorVoltage = 12000;
 
-        grapher.update("Actual Yaw", (imu.get_rotation()) / (startDegree * 2));
-        grapher.update("Target Yaw", (startDegree / (startDegree * 2)));
+        grapher.update("Left Dist", (currentDistanceTraveledLeft) / (radius+trackWidth));
+        grapher.update("Right Dist", (currentDistanceTraveledRight / (radius+trackWidth)));
         grapher.update("Voltage", (rightMotorVoltage / 12000));
 
         leftBottomMotors->move_voltage(leftMotorVoltage);
@@ -582,13 +580,15 @@ void autonomous() {
 
     // threeBall();
 
-    fourBallCloseSide();
+    //fourBallCloseSide();
 
     // flywheelMotor.move(127);
 
     // closeSideAuton();
 
     // skillsAuton();
+
+    circleArcTo(12, 3.14/2, 10.125);
 }
 
 /**
