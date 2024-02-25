@@ -165,10 +165,16 @@ void circleArcTo(float radius, float finalTheta, float trackWidth) {
         grapher.update("Right Dist", (currentDistanceTraveledRight / (radius+trackWidth)));
         grapher.update("Voltage", (rightMotorVoltage / 12000));
 
-        leftBottomMotors->move_voltage(leftMotorVoltage);
-        rightBottomMotors->move_voltage(rightMotorVoltage);
-        leftPTOMotors->move_voltage(leftMotorVoltage);
-        rightPTOMotors->move_voltage(rightMotorVoltage);
+        
+        if (finalTheta > 0) {
+            rightBottomMotors->move_voltage(rightMotorVoltage);
+            rightPTOMotors->move_voltage(rightMotorVoltage);
+        } else {
+            leftBottomMotors->move_voltage(leftMotorVoltage);
+            leftPTOMotors->move_voltage(leftMotorVoltage);
+        }
+        //rightBottomMotors->move_voltage(rightMotorVoltage);
+        //rightPTOMotors->move_voltage(rightMotorVoltage);
 
         pros::delay(20);
     }
@@ -587,6 +593,8 @@ void autonomous() {
     // closeSideAuton();
 
     // skillsAuton();
+
+    //turnTo(90);
 
     circleArcTo(12, 3.14/2, 10.125);
 }
