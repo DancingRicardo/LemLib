@@ -128,10 +128,10 @@ void circleArcTo(float radius, float finalTheta, float trackWidth) {
 
     if (finalTheta > 0) {
         targetDistanceRight = radius * (finalTheta - startDegree);
-        targetDistanceLeft = (radius+trackWidth) * (finalTheta - startDegree);
+        targetDistanceLeft = (radius + trackWidth) * (finalTheta - startDegree);
     } else {
         targetDistanceLeft = radius * (finalTheta - startDegree);
-        targetDistanceRight = (radius+trackWidth) * (finalTheta - startDegree);
+        targetDistanceRight = (radius + trackWidth) * (finalTheta - startDegree);
     }
 
     leftBottomMotors->set_zero_position_all(0);
@@ -149,23 +149,29 @@ void circleArcTo(float radius, float finalTheta, float trackWidth) {
 
         // Update the PID loop and get the motor voltage
 
-        float currentDistanceTraveledLeft = leftBottomMotors->get_position(0) *
-                                        3.14159265 / 180 * 1.375 * .75;
+        float currentDistanceTraveledLeft = leftBottomMotors->get_position(0) * 3.14159265 / 180 * 1.375 * .75;
 
-        float currentDistanceTraveledRight = rightBottomMotors->get_position(0) * 
-                                        3.14159265 / 180 * 1.375 * .75;
+        float currentDistanceTraveledRight = rightBottomMotors->get_position(0) * 3.14159265 / 180 * 1.375 * .75;
 
-        float leftMotorVoltage = drivePID.update(targetDistanceLeft, currentDistanceTraveledLeft);
-        float rightMotorVoltage = drivePID.update(targetDistanceRight, currentDistanceTraveledRight);
+        float leftMotorVoltage, rightMotorVoltage;
+        if (finalTheta - startDegree > 0) {
+            leftMotorVoltage = drivePID.update(targetDistanceLeft, currentDistanceTraveledLeft);
+            rightMotorVoltage =
+                drivePID.update(targetDistanceLeft / (1 + (trackWidth / radius)), currentDistanceTraveledRight);
+
+        } else {
+            leftMotorVoltage =
+                drivePID.update(targetDistanceLeft / (1 + (trackWidth / radius)), currentDistanceTraveledRight);
+            rightMotorVoltage = drivePID.update(targetDistanceLeft, currentDistanceTraveledLeft);
+        }
 
         if (leftMotorVoltage > 12000) leftMotorVoltage = 12000;
         if (rightMotorVoltage > 12000) rightMotorVoltage = 12000;
 
-        grapher.update("Left Dist", (currentDistanceTraveledLeft) / (radius+trackWidth));
-        grapher.update("Right Dist", (currentDistanceTraveledRight / (radius+trackWidth)));
+        grapher.update("Left Dist", (currentDistanceTraveledLeft) / (radius + trackWidth));
+        grapher.update("Right Dist", (currentDistanceTraveledRight / (radius + trackWidth)));
         grapher.update("Voltage", (rightMotorVoltage / 12000));
 
-        
         if (finalTheta > 0) {
             rightBottomMotors->move_voltage(rightMotorVoltage);
             rightPTOMotors->move_voltage(rightMotorVoltage);
@@ -173,8 +179,8 @@ void circleArcTo(float radius, float finalTheta, float trackWidth) {
             leftBottomMotors->move_voltage(leftMotorVoltage);
             leftPTOMotors->move_voltage(leftMotorVoltage);
         }
-        //rightBottomMotors->move_voltage(rightMotorVoltage);
-        //rightPTOMotors->move_voltage(rightMotorVoltage);
+        // rightBottomMotors->move_voltage(rightMotorVoltage);
+        // rightPTOMotors->move_voltage(rightMotorVoltage);
 
         pros::delay(20);
     }
@@ -586,7 +592,7 @@ void autonomous() {
 
     // threeBall();
 
-    //fourBallCloseSide();
+    // fourBallCloseSide();
 
     // flywheelMotor.move(127);
 
@@ -594,9 +600,9 @@ void autonomous() {
 
     // skillsAuton();
 
-    //turnTo(90);
+    // turnTo(90);
 
-    circleArcTo(12, 3.14/2, 10.125);
+    circleArcTo(12, 3.14 / 2, 10.125);
 }
 
 /**
