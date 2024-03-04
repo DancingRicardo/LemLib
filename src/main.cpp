@@ -113,7 +113,7 @@ void driveTo(float distance) {
     grapher.stopTask();
 }
 
-void circleArcTo(float radius, float finalTheta, float trackWidth) {
+void circleArcTo(float radius, float finalTheta) {
     graphy::AsyncGrapher grapher("Drive PID", 20);
 
     lemlib::FAPID drivePID(0, 0, 1000, 0, 4750, "Drive PID"); // 2000
@@ -123,15 +123,16 @@ void circleArcTo(float radius, float finalTheta, float trackWidth) {
     // the time it takes for the bot to give up on the PID loop and exit.
     drivePID.setExit(2, .1, 500, 300, 6000);
 
-    float startDegree = imu.get_rotation() / 180 * 3.14159265;
+    //float startDegree = imu.get_rotation() / 180 * 3.14159265;
     float targetDistanceLeft, targetDistanceRight;
+    float trackWidth = 10.125;
 
     if (finalTheta > 0) {
-        targetDistanceRight = radius * (finalTheta - startDegree);
-        targetDistanceLeft = (radius + trackWidth) * (finalTheta - startDegree);
+        targetDistanceLeft = radius * (finalTheta);
+        targetDistanceRight = (radius + trackWidth) * (finalTheta);
     } else {
-        targetDistanceLeft = radius * (finalTheta - startDegree);
-        targetDistanceRight = (radius + trackWidth) * (finalTheta - startDegree);
+        targetDistanceRight = radius * (finalTheta);
+        targetDistanceLeft = (radius + trackWidth) * (finalTheta);
     }
 
     leftBottomMotors->set_zero_position_all(0);
@@ -154,20 +155,22 @@ void circleArcTo(float radius, float finalTheta, float trackWidth) {
         float currentDistanceTraveledRight = rightBottomMotors->get_position(0) * 3.14159265 / 180 * 1.375 * .75;
 
         float leftMotorVoltage, rightMotorVoltage;
-        if (finalTheta - startDegree > 0) {
-            leftMotorVoltage = drivePID.update(targetDistanceLeft, currentDistanceTraveledLeft);
+        if (finalTheta < 0) {
+            leftMotorVoltage = drivePID.update((radius + trackWidth) * (finalTheta), currentDistanceTraveledLeft);
             rightMotorVoltage =
-                drivePID.update(targetDistanceLeft / (1 + (trackWidth / radius)), currentDistanceTraveledRight);
+                drivePID.update((radius + trackWidth) * (finalTheta) / (1 + (trackWidth / radius)), currentDistanceTraveledRight);
 
         } else {
             leftMotorVoltage =
-                drivePID.update(targetDistanceLeft / (1 + (trackWidth / radius)), currentDistanceTraveledRight);
-            rightMotorVoltage = drivePID.update(targetDistanceLeft, currentDistanceTraveledLeft);
+                drivePID.update((radius + trackWidth) * (finalTheta) / (1 + (trackWidth / radius)), currentDistanceTraveledRight);
+            rightMotorVoltage = drivePID.update((radius + trackWidth) * (finalTheta), currentDistanceTraveledLeft);
         }
 
         if (leftMotorVoltage > 12000) leftMotorVoltage = 12000;
         if (rightMotorVoltage > 12000) rightMotorVoltage = 12000;
-
+        if (leftMotorVoltage < -12000) leftMotorVoltage = -12000;
+        if (rightMotorVoltage < -12000) rightMotorVoltage = -12000;
+        
         grapher.update("Left Dist", (currentDistanceTraveledLeft) / (radius + trackWidth));
         grapher.update("Right Dist", (currentDistanceTraveledRight / (radius + trackWidth)));
         grapher.update("Voltage", (rightMotorVoltage / 12000));
@@ -285,8 +288,8 @@ void threeBall() {
 }
 
 void sixBall() {
-    ptoLeft.set_value(true);
-    ptoRight.set_value(true);
+    //ptoLeft.set_value(true);
+    //ptoRight.set_value(true);
 
     // Intake acorn under bar
 
@@ -393,6 +396,56 @@ void sixBall() {
     horizLeftFlap.set_value(false);
     horizRightFlap.set_value(false);
     driveTo(-10);
+}
+
+void fiveBallFarSide() {
+
+    ptoLeft.set_value(false);
+    ptoRight.set_value(false);
+
+    // Rush
+    intakeMotor.move(127);
+    //horizLeftFlap.set_value(true);
+    //horizRightFlap.set_value(true);
+    driveTo(56);
+
+    // Drive Back to put by the goal
+
+    driveTo(-8);
+
+    turnTo(90);
+    intakeMotor.move(-127);
+    pros::delay(500);
+    turnTo(170);
+    intakeMotor.move(127);
+
+    // Get corner acorn
+
+    driveTo(24);
+    driveTo(-12);
+
+    // Turn to goal, score
+
+    turnTo(-180);
+
+    horizLeftFlap.set_value(true);
+    horizRightFlap.set_value(true);
+
+    driveTo(25);
+
+    // Go back, turn to matchload bar
+
+    driveTo(-12);
+    turnTo(90);
+
+    // Drive to matchload bar
+
+    driveTo(20);
+    turnTo(90);
+
+    // Descore, score
+
+
 }
 
 void skillsAuton() {
@@ -553,6 +606,72 @@ void fourBallCloseSide() {
     driveTo(12);
 }
 
+void midBallRushCloseSide() {
+
+    ptoLeft.set_value(false);
+    ptoRight.set_value(false);
+
+    // Rush
+    intakeMotor.move(127);
+    driveTo(52);
+
+    // Turn to barrier
+    turnTo(70);
+
+    horizLeftFlap.set_value(true);
+    horizRightFlap.set_value(true);
+
+    // Push over
+    leftBottomMotors->move_voltage(7000);
+    rightBottomMotors->move_voltage(6000);
+    leftPTOMotors->move_voltage(7000);
+    rightPTOMotors->move_voltage(6000);
+
+    pros::delay(750);
+
+    leftBottomMotors->move_voltage(0);
+    rightBottomMotors->move_voltage(0);
+    leftPTOMotors->move_voltage(0);
+    rightPTOMotors->move_voltage(0);
+
+    horizLeftFlap.set_value(false);
+    horizRightFlap.set_value(false);
+
+    // Drive back, turn to matchload bar
+
+    driveTo(-12);
+
+    turnTo(-55);
+
+    // Go to matchload bar
+
+    driveTo(-56);
+
+    // Descore
+
+    vertRightFlap.set_value(true);
+
+    //circleArcTo(12, -100);
+
+    turnTo(-100);
+
+    pros::delay(500);
+
+    vertRightFlap.set_value(false);
+
+    turnTo(180);
+
+    // Drive under matchload bar
+    
+    //horizLeftFlap.set_value(true);
+    //horizRightFlap.set_value(true);
+    intakeMotor.move(-127);
+    driveTo(42);
+
+
+    
+}
+
 /**
  * Runs initialization code. This occurs as soon as the program is started.
  *
@@ -584,6 +703,14 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
  * This is an example autonomous routine which demonstrates a lot of the features LemLib has to offer
  */
 void autonomous() {
+
+    ptoLeft.set_value(false);
+    ptoRight.set_value(false);
+    
+    //pros::delay(100);
+
+    midBallRushCloseSide();
+
     // graphy::AsyncGrapher grapher("Drive PID", 20);
 
     // driveTo(48);
@@ -592,17 +719,19 @@ void autonomous() {
 
     // threeBall();
 
-    // fourBallCloseSide();
+    // fiveBallFarSide();
 
-    // flywheelMotor.move(127);
+    //flywheelMotor.move(127);
 
-    // closeSideAuton();
+    //closeSideAuton();
 
     // skillsAuton();
 
-    // turnTo(90);
+    //turnTo(90);
 
-    circleArcTo(12, 3.14 / 2, 10.125);
+    // Turn to 90 degrees
+
+    //circleArcTo(24, 3.14 / 2);
 }
 
 /**
@@ -614,8 +743,8 @@ void opcontrol() {
 
     // leftPTOMotors->set_zero_position_all(0);
 
-    ptoLeft.set_value(true);
-    ptoRight.set_value(true);
+    ptoLeft.set_value(false);
+    ptoRight.set_value(false);
 
     graphy::AsyncGrapher grapher("Lift PID", 20);
 
@@ -687,8 +816,8 @@ void opcontrol() {
         }
 
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_RIGHT)) {
-            ptoLeft.set_value(true);
-            ptoRight.set_value(true);
+            ptoLeft.set_value(false);
+            ptoRight.set_value(false);
             isLifted = false;
         }
 
@@ -714,8 +843,8 @@ void opcontrol() {
 
         } else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP) && (!wentUp || isLifted)) {
             // lockingMech.set_value(true);
-            ptoLeft.set_value(false);
-            ptoRight.set_value(false);
+            ptoLeft.set_value(true);
+            ptoRight.set_value(true);
             isLifted = true;
 
             leftPTOMotors->move(-30);
@@ -756,8 +885,8 @@ void opcontrol() {
         }
 
         if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_UP)) {
-            ptoLeft.set_value(false);
-            ptoRight.set_value(false);
+            ptoLeft.set_value(true);
+            ptoRight.set_value(true);
             isLifted = true;
         }
 
