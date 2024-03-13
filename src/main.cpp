@@ -1,9 +1,19 @@
 #include "main.h"
 #include "lemlib/api.hpp"
 #include "lemlib/chassis/chassis.hpp"
+#include "lemlib/eventhandler/joystickeventhandler.hpp"
+#include "lemlib/eventhandler/prosevents/joystickevents.hpp"
+#include "lemlib/eventhandler/testevents.hpp"
 #include "lemlib/logger/stdout.hpp"
 #include "pros/misc.h"
+#include "lemlib/eventhandler/eventhandler.hpp"
+#include "lemlib/eventhandler/prosevents/buttonevents.hpp"
+#include "lemlib/devices/gamepad/prosgamepad.hpp"
+#include "pros/misc.hpp"
+#include <memory>
+#include <vector>
 
+/*
 // controller
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
@@ -59,6 +69,35 @@ lemlib::OdomSensors sensors(nullptr, // vertical tracking wheel 1, set to nullpt
 
 // create the chassis
 lemlib::Differential chassis(drivetrain, linearController, angularController, sensors);
+*/
+
+// left motors on ports 8, 20, and 19. Motors on ports 8 and 20 are reversed. Using blue gearbox
+auto leftBottomMotors = lemlib::makeMotorGroup({-12, -13}, pros::v5::MotorGears::blue);
+// right motors on ports 2, 11, and 13. Motor on port 13 is reversed. Using blue gearbox
+auto rightBottomMotors = lemlib::makeMotorGroup({4, 3}, pros::v5::MotorGears::blue);
+
+pros::Motor flywheelMotor(7);
+pros::Motor intakeMotor(9);
+
+bool ifAIsPressed() {
+    std::cout << "Hey! A's pressed, and this might be working. Timestamp: " << pros::millis() << std::endl;
+    return true;
+}
+
+bool ifAIsNotPressed() {
+    std::cout << "Damn. A's not pressed. Timestamp: " << pros::millis() << std::endl;
+    return true;
+}
+
+int lefttank(int left) {
+    leftBottomMotors->move(left);
+    return 1;
+}
+
+int righttank(int right) {
+    rightBottomMotors->move(right);
+    return 1;
+}
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -68,20 +107,6 @@ lemlib::Differential chassis(drivetrain, linearController, angularController, se
  */
 void initialize() {
     pros::lcd::initialize(); // initialize brain screen
-    chassis.initialize(); // calibrate sensors
-
-    // thread to for brain screen and position logging
-    pros::Task screenTask([&]() {
-        lemlib::Pose pose(0, 0, 0);
-        while (true) {
-            pose = chassis.getPose();
-            pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
-            pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
-            pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
-            // delay to save resources
-            pros::delay(10);
-        }
-    });
 }
 
 /**
@@ -103,38 +128,82 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
  *
  * This is an example autonomous routine which demonstrates a lot of the features LemLib has to offer
  */
-void autonomous() {
-    // example movement: Move to x: 20 and y:15, and face heading 90. Timeout set to 4000 ms
-    chassis.moveTo(20, 15, 90, 4000);
-    // example movement: Turn to face the point x:45, y:-45. Timeout set to 1000
-    // dont turn faster than 60 (out of a maximum of 127)
-    chassis.turnToPose(45, -45, 1000, true, 60);
-    // example movement: Follow the path in path.txt. Lookahead at 15, Timeout set to 4000
-    // following the path with the back of the robot (forwards = false)
-    // see line 116 to see how to define a path
-    chassis.follow(example_txt, 15, 4000, false);
-    // wait until the chassis has travelled 10 inches. Otherwise the code directly after
-    // the movement will run immediately
-    // Unless its another movement, in which case it will wait
-    chassis.waitUntil(10);
-    pros::lcd::print(4, "Travelled 10 inches during pure pursuit!");
-    // wait until the movement is done
-    chassis.waitUntilDone();
-    pros::lcd::print(4, "pure pursuit finished!");
-}
+void autonomous() {}
 
 /**
  * Runs in driver control
  */
 void opcontrol() {
+    std::cout << "Began OP Control" << std::endl;
+
+    std::shared_ptr<pros::Controller> controlla = std::make_shared<pros::Controller>(pros::E_CONTROLLER_MASTER);
+
+    std::cout << "Made Controller" << std::endl;
+
+    lemlib::PROSButtonEvent XEvent(controlla, pros::E_CONTROLLER_DIGITAL_X, pros::E_CONTROLLER_DIGITAL_X);
+    lemlib::PROSButtonEvent BEvent(controlla, pros::E_CONTROLLER_DIGITAL_B, pros::E_CONTROLLER_DIGITAL_B);
+    lemlib::PROSButtonEvent YEvent(controlla, pros::E_CONTROLLER_DIGITAL_Y, pros::E_CONTROLLER_DIGITAL_Y);
+    lemlib::PROSButtonEvent AEvent(controlla, pros::E_CONTROLLER_DIGITAL_A, pros::E_CONTROLLER_DIGITAL_A);
+    lemlib::PROSButtonEvent L1Event(controlla, pros::E_CONTROLLER_DIGITAL_L1, pros::E_CONTROLLER_DIGITAL_L1);
+    lemlib::PROSButtonEvent L2Event(controlla, pros::E_CONTROLLER_DIGITAL_L2, pros::E_CONTROLLER_DIGITAL_L2);
+    lemlib::PROSButtonEvent R1Event(controlla, pros::E_CONTROLLER_DIGITAL_R1, pros::E_CONTROLLER_DIGITAL_R1);
+    lemlib::PROSButtonEvent R2Event(controlla, pros::E_CONTROLLER_DIGITAL_R2, pros::E_CONTROLLER_DIGITAL_R2);
+
+    std::cout << "Made Button Events" << std::endl;
+
+    std::vector<std::shared_ptr<lemlib::Event>> buttonsEvents(
+        {std::make_shared<lemlib::PROSButtonEvent>(XEvent), std::make_shared<lemlib::PROSButtonEvent>(AEvent),
+         std::make_shared<lemlib::PROSButtonEvent>(BEvent), std::make_shared<lemlib::PROSButtonEvent>(YEvent),
+         std::make_shared<lemlib::PROSButtonEvent>(L1Event), std::make_shared<lemlib::PROSButtonEvent>(L2Event),
+         std::make_shared<lemlib::PROSButtonEvent>(R1Event), std::make_shared<lemlib::PROSButtonEvent>(R2Event)});
+
+    lemlib::EventHandler buttonEventHandler(buttonsEvents);
+
+    lemlib::PROSJoystickEvent leftYJoystickEvent(controlla, pros::E_CONTROLLER_ANALOG_LEFT_Y,
+                                                 pros::E_CONTROLLER_ANALOG_LEFT_Y, lefttank);
+    lemlib::PROSJoystickEvent rightYJoystickEvent(controlla, pros::E_CONTROLLER_ANALOG_RIGHT_Y,
+                                                  pros::E_CONTROLLER_ANALOG_RIGHT_Y, righttank);
+
+    std::vector<std::shared_ptr<lemlib::JoystickEvent>> joystickEvents(
+        {std::make_shared<lemlib::PROSJoystickEvent>(leftYJoystickEvent),
+         std::make_shared<lemlib::PROSJoystickEvent>(rightYJoystickEvent)});
+
+    lemlib::JoystickEventHandler joystickEventHandler(joystickEvents);
+
+    std::cout << "Started" << std::endl;
+
+    lemlib::PROS_Gamepad gamepad(pros::E_CONTROLLER_MASTER, std::make_unique<lemlib::EventHandler>(buttonEventHandler),
+                                 std::make_unique<lemlib::JoystickEventHandler>(joystickEventHandler));
+
+    gamepad.startMainLoop();
+
     // controller
     // loop to continuously update motors
+
+    // buttonEventHandler.startAsyncTask();
+
     while (true) {
-        // get joystick positions
-        int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
-        int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
         // move the chassis with curvature drive
-        chassis.curvature(leftY, rightX);
+
+        if (gamepad.toggleButton(pros::E_CONTROLLER_DIGITAL_A)) {
+            flywheelMotor.move(20);
+        } else {
+            flywheelMotor.move(0);
+        }
+
+        if (gamepad.toggleButton(pros::E_CONTROLLER_DIGITAL_B)) {
+            intakeMotor.move(127);
+            std::cout << "Button B Toggled On: " << pros::millis() << std::endl;
+        } else {
+            intakeMotor.move(0);
+        }
+
+        int leftY = gamepad.getJoystick(pros::E_CONTROLLER_ANALOG_LEFT_Y);
+        int rightY = gamepad.getJoystick(pros::E_CONTROLLER_ANALOG_RIGHT_Y);
+
+        // leftBottomMotors->move(leftY);
+        // rightBottomMotors->move(rightY);
+
         // delay to save resources
         pros::delay(10);
     }
