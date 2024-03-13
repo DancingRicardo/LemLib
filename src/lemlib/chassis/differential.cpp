@@ -14,17 +14,12 @@
 #include "lemlib/movements/boomerang.hpp"
 #include "lemlib/movements/purepursuit.hpp"
 #include "lemlib/movements/turn.hpp"
+#include "lemlib/devices/motor/prosmotorgroup.hpp"
 #include "lemlib/odom/differentialArc.hpp"
 #include "lemlib/devices/gyro/imu.hpp"
 #include <memory>
 
 namespace lemlib {
-std::shared_ptr<pros::MotorGroup> makeMotorGroup(const std::initializer_list<int8_t>& ports,
-                                                 const pros::v5::MotorGears& gears) {
-    // create the shared pointer
-    auto motorsPtr = std::make_shared<pros::MotorGroup>(ports, gears);
-    return motorsPtr;
-}
 
 /**
  * Construct a new Chassis
@@ -198,8 +193,8 @@ void Differential::update() {
             output.second = 0;
         }
         // move the motors
-        this->drivetrain->leftMotors->move(output.first);
-        this->drivetrain->rightMotors->move(output.second);
+        this->drivetrain->leftMotors->spinJoystick(output.first);
+        this->drivetrain->rightMotors->spinJoystick(output.second);
     }
 }
 
@@ -246,8 +241,8 @@ void Differential::curvature(int throttle, int turn, float linearCurveGain, floa
     leftPower = driveCurve(leftPower, linearCurveGain);
     rightPower = turnCurve(rightPower, turnCurveGain);
 
-    this->drivetrain->leftMotors->move(leftPower);
-    this->drivetrain->rightMotors->move(rightPower);
+    this->drivetrain->leftMotors->spinJoystick(leftPower);
+    this->drivetrain->rightMotors->spinJoystick(rightPower);
 }
 
 /**
@@ -263,8 +258,8 @@ void Differential::arcade(int throttle, int turn, float linearCurveGain, float t
                           const DriveCurveFunction_t& driveCurve, const DriveCurveFunction_t& turnCurve) {
     int leftPower = driveCurve(throttle + turn, linearCurveGain);
     int rightPower = turnCurve(throttle - turn, turnCurveGain);
-    this->drivetrain->leftMotors->move(leftPower);
-    this->drivetrain->rightMotors->move(rightPower);
+    this->drivetrain->leftMotors->spinJoystick(leftPower);
+    this->drivetrain->rightMotors->spinJoystick(rightPower);
 }
 
 /**
@@ -278,7 +273,7 @@ void Differential::arcade(int throttle, int turn, float linearCurveGain, float t
  */
 void Differential::tank(int left, int right, float leftCurveGain, float rightCurveGain,
                         const DriveCurveFunction_t& leftCurve, const DriveCurveFunction_t& rightCurve) {
-    this->drivetrain->leftMotors->move(leftCurve(left, leftCurveGain));
-    this->drivetrain->rightMotors->move(rightCurve(right, rightCurveGain));
+    this->drivetrain->leftMotors->spinJoystick(leftCurve(left, leftCurveGain));
+    this->drivetrain->rightMotors->spinJoystick(rightCurve(right, rightCurveGain));
 }
 }; // namespace lemlib
