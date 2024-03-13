@@ -2,6 +2,7 @@
 #include "lemlib/timer.hpp"
 #include "lemlib/logger/logger.hpp"
 #include "lemlib/odom/differentialArc.hpp"
+#include <memory>
 
 namespace lemlib {
 /**
@@ -15,11 +16,15 @@ namespace lemlib {
  * Vectors are passed since they can have a varying number of sensors in them, allowing for
  * any tracking wheel + imu setup
  */
-DifferentialArc::DifferentialArc(std::vector<TrackingWheel>& verticals, std::vector<TrackingWheel>& horizontals,
-                                 std::vector<TrackingWheel>& drivetrain, std::vector<std::shared_ptr<Gyro>>& gyros)
+DifferentialArc::DifferentialArc(const std::vector<std::shared_ptr<TrackingWheel>>& verticals,
+                                 const std::vector<std::shared_ptr<TrackingWheel>>& horizontals,
+                                 const std::vector<std::shared_ptr<TrackingWheel>>& drivetrain,
+                                 const std::vector<std::shared_ptr<GPS>>& gps,
+                                 const std::vector<std::shared_ptr<Gyro>>& gyros)
     : verticals(verticals),
       horizontals(horizontals),
       drivetrain(drivetrain),
+      gps(gps),
       gyros(gyros) {}
 
 /**
@@ -29,29 +34,31 @@ DifferentialArc::DifferentialArc(std::vector<TrackingWheel>& verticals, std::vec
  * calibration. The encoders will output errors if they fail to calibrate.
  */
 void DifferentialArc::calibrate(bool calibrateGyros) {
-    std::vector<TrackingWheel> newVerticals = {};
-    std::vector<TrackingWheel> newHorizontals = {};
-    std::vector<TrackingWheel> newDrivetrain = {};
+    std::vector<std::shared_ptr<TrackingWheel>> newVerticals = {};
+    std::vector<std::shared_ptr<TrackingWheel>> newHorizontals = {};
+    std::vector<std::shared_ptr<TrackingWheel>> newDrivetrain = {};
     std::vector<std::shared_ptr<Gyro>> newGyros = {};
+    std::vector<std::shared_ptr<GPS>> gps = {};
+    //std::vector<std::shared_ptr<pros::IMU>> imus = {};
 
     // calibrate vertical tracking wheels
     for (auto it = this->verticals.begin(); it != this->verticals.end(); it++) {
-        if (it->reset()) {
-            infoSink()->warn("Vertical tracker at offset {} failed calibration!", it->getOffset());
+        if (it->get()->reset()) {
+            infoSink()->warn("Vertical tracker at offset {} failed calibration!", it->get()->getOffset());
         } else newVerticals.push_back(*it);
     }
 
     // calibrate horizontal tracking wheels
     for (auto it = this->horizontals.begin(); it != this->horizontals.end(); it++) {
-        if (it->reset()) {
-            infoSink()->warn("Horizontal tracker at offset {} failed calibration!", it->getOffset());
+        if (it->get()->reset()) {
+            infoSink()->warn("Horizontal tracker at offset {} failed calibration!", it->get()->getOffset());
         } else newHorizontals.push_back(*it);
     }
 
     // calibrate drivetrain motors
     for (auto it = this->drivetrain.begin(); it != this->drivetrain.end(); it++) {
-        if (it->reset()) {
-            if (sgn(it->getOffset() == 1)) infoSink()->warn("Left drivetrain motor failed to calibrate!");
+        if (it->get()->reset()) {
+            if (sgn(it->get()->getOffset() == 1)) infoSink()->warn("Left drivetrain motor failed to calibrate!");
             else infoSink()->warn("Right drivetrain motor failed to calibrate!");
         } else newDrivetrain.push_back(*it);
     }
@@ -59,8 +66,8 @@ void DifferentialArc::calibrate(bool calibrateGyros) {
     if (!calibrateGyros) return; // return if we don't need to calibrate gyros
     // calibrate gyros
     for (auto& it : this->gyros) it->calibrate();
-    Timer timer(3000); // try calibrating gyros for 3000 ms
-    while (!timer.isDone()) {
+    Timer gyrotimer(3000); // try calibrating gyros for 3000 ms
+    while (!gyrotimer.isDone()) {
         for (auto& gyro : this->gyros) { // continuously calibrate in case of failure
             if (!gyro->isCalibrating() && !gyro->isCalibrated()) gyro->calibrate();
         }
@@ -74,6 +81,16 @@ void DifferentialArc::calibrate(bool calibrateGyros) {
             newGyros.push_back(*it);
         }
     }
+
+    /*// calibrate imus
+    for (auto& it : this->imus) it.reset();
+    Timer imutimer(3000); // try calibrating gyros for 3000 ms
+    while (!imutimer.isDone()) {
+        for (std::shared_ptr<pros::IMU>& imu : this->imus) { // continuously calibrate in case of failure
+            if (!imu->is_calibrating()) imu.reset();
+        }
+        pros::delay(10);
+    }*/
 
     this->verticals = newVerticals;
     this->horizontals = newHorizontals;
@@ -90,9 +107,9 @@ void DifferentialArc::calibrate(bool calibrateGyros) {
  * @param tracker2 the second tracking wheel
  * @return float change in angle, in radians
  */
-float calcDeltaTheta(TrackingWheel& tracker1, TrackingWheel& tracker2) {
-    const float numerator = tracker1.getDistanceDelta(false) - tracker2.getDistanceDelta(false);
-    const float denominator = tracker1.getOffset() - tracker2.getOffset();
+float calcDeltaTheta(std::shared_ptr<TrackingWheel>& tracker1, std::shared_ptr<TrackingWheel>& tracker2) {
+    const float numerator = tracker1->getDistanceDelta(false) - tracker2->getDistanceDelta(false);
+    const float denominator = tracker1->getOffset() - tracker2->getOffset();
     return numerator / denominator;
 }
 
@@ -107,6 +124,12 @@ float calcDeltaTheta(TrackingWheel& tracker1, TrackingWheel& tracker2) {
 float calcDeltaTheta(std::vector<std::shared_ptr<Gyro>>& gyros) {
     float deltaTheta = 0;
     for (const auto& gyro : gyros) deltaTheta += gyro->getRotationDelta() / gyros.size();
+    return deltaTheta;
+}
+
+float calcDeltaTheta(std::vector<std::shared_ptr<GPS>>& gpsArg) {
+    float deltaTheta = 0;
+    for (const auto& gps : gpsArg) deltaTheta += gps->getPose().theta / gpsArg.size();
     return deltaTheta;
 }
 
@@ -130,7 +153,8 @@ void DifferentialArc::update() {
     // 1. IMU
     // 2. Horizontal tracking wheels
     // 3. Vertical tracking wheels
-    // 4. Drivetrain motor encoders
+    // 4. GPS Sensor
+    // 5. Drivetrain motor encoders
     float theta = this->pose.theta;
     if (this->gyros.size() > 0) { // calculate heading with imus if we have enough
         theta += calcDeltaTheta(this->gyros);
@@ -140,6 +164,8 @@ void DifferentialArc::update() {
         theta += calcDeltaTheta(this->verticals.at(0), this->verticals.at(1));
     } else if (drivetrain.size() > 1) { // calculate heading with drivetrain motor encoders
         theta += calcDeltaTheta(this->drivetrain.at(0), this->drivetrain.at(1));
+    } else if (gps.size() > 0) { // calculate heading with GPS if we have one
+        theta += calcDeltaTheta(this->gps);
     } else {
         infoSink()->error("Odom calculation failure! Not enough sensors to calculate heading");
         return;
@@ -153,28 +179,42 @@ void DifferentialArc::update() {
     const float sinDTheta2 = (deltaTheta == 0) ? 1 : 2 * std::sin(deltaTheta / 2);
 
     // calculate local y position
-    for (auto& tracker : this->horizontals) {
-        // prevent divide by 0
-        const float radius = (deltaTheta == 0) ? tracker.getDistanceDelta()
-                                               : tracker.getDistanceDelta() / deltaTheta + tracker.getOffset();
-        local.y += sinDTheta2 * radius / this->horizontals.size();
+    if (horizontals.size() > 0) {
+        for (auto& tracker : this->horizontals) {
+            // prevent divide by 0
+            const float radius = (deltaTheta == 0) ? tracker->getDistanceDelta()
+                                                   : tracker->getDistanceDelta() / deltaTheta + tracker->getOffset();
+            local.y += sinDTheta2 * radius / this->horizontals.size();
+        }
+    } else if (gps.size() > 0) {
+        float totalypos = 0;
+        for (auto& gps : this->gps) { totalypos += gps->getPose().y; }
+        float averageYPos = totalypos / this->gps.size();
+        local.y = averageYPos;
+    } else { // output a warning if there are no available sensors to calculate local y
+        infoSink()->warn("No horizontal tracking wheels or GPS! Assuming y movement is 0");
     }
 
     // calculate local x position
     if (this->verticals.size() > 0) { // use dedicated tracking wheels if we have any
         for (auto& tracker : this->verticals) {
-            const float radius = (deltaTheta == 0) ? tracker.getDistanceDelta()
-                                                   : tracker.getDistanceDelta() / deltaTheta + tracker.getOffset();
+            const float radius = (deltaTheta == 0) ? tracker->getDistanceDelta()
+                                                   : tracker->getDistanceDelta() / deltaTheta + tracker->getOffset();
             local.x += sinDTheta2 * radius / this->verticals.size();
         }
     } else if (this->drivetrain.size() > 0) { // use motor encoders if we have no dedicated tracking wheels
         for (auto& motor : this->drivetrain) {
-            const float radius = (deltaTheta == 0) ? motor.getDistanceDelta()
-                                                   : motor.getDistanceDelta() / deltaTheta + motor.getOffset();
+            const float radius = (deltaTheta == 0) ? motor->getDistanceDelta()
+                                                   : motor->getDistanceDelta() / deltaTheta + motor->getOffset();
             local.x += sinDTheta2 * radius / this->drivetrain.size();
         }
+    } else if (this->gps.size() > 0) {
+        float totalxpos = 0;
+        for (auto& gps : this->gps) { totalxpos += gps->getPose().x; }
+        float averageXPos = totalxpos / this->gps.size();
+        local.x = averageXPos;
     } else { // output a warning if there are no available sensors to calculate local x
-        infoSink()->warn("No vertical tracking wheels! Assuming y movement is 0");
+        infoSink()->warn("No vertical tracking wheels or GPS! Assuming y movement is 0");
     }
 
     // calculate global position

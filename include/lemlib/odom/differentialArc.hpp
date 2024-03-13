@@ -2,9 +2,12 @@
 
 #include <vector>
 #include <memory>
+#include "pros/imu.hpp"
 #include "lemlib/odom/odom.hpp"
+#include "lemlib/odom/gps.hpp"
 #include "lemlib/devices/trackingWheel.hpp"
 #include "lemlib/devices/gyro/gyro.hpp"
+#include "lemlib/devices/gyro/imu.hpp"
 
 namespace lemlib {
 class DifferentialArc : public Odom {
@@ -17,8 +20,24 @@ class DifferentialArc : public Odom {
          * @param drivetrain vector containing drivetrain motors as tracking wheels
          * @param imus vector containing imus to be used
          */
-        DifferentialArc(std::vector<TrackingWheel>& verticals, std::vector<TrackingWheel>& horizontals,
-                        std::vector<TrackingWheel>& drivetrain, std::vector<std::shared_ptr<Gyro>>& gyros);
+        DifferentialArc(const std::vector<TrackingWheel>& verticals, const std::vector<TrackingWheel>& horizontals,
+                        const std::vector<TrackingWheel>& drivetrain, const std::vector<std::shared_ptr<GPS>>& gps,
+                        const std::vector<std::shared_ptr<Gyro>>& gyros);
+
+        /**
+         * @brief Construct a new Arc Odom
+         *
+         * @param verticals vector containing vertical tracking wheels to be used
+         * @param horizontals vector containing horizontal tracking wheels to be used
+         * @param drivetrain vector containing drivetrain motors as tracking wheels
+         * @param gps vector containing gps sensors to be used
+         * @param imus vector containing imus to be used
+         */
+        DifferentialArc(const std::vector<std::shared_ptr<TrackingWheel>>& verticals,
+                        const std::vector<std::shared_ptr<TrackingWheel>>& horizontals,
+                        const std::vector<std::shared_ptr<TrackingWheel>>& drivetrain,
+                        const std::vector<std::shared_ptr<GPS>>& gps, 
+                        const std::vector<std::shared_ptr<Gyro>>& gyros);
 
         /**
          * @brief Calibrate tracking wheels and inertial sensors
@@ -32,9 +51,10 @@ class DifferentialArc : public Odom {
          */
         void update() override;
     private:
-        std::vector<TrackingWheel> verticals;
-        std::vector<TrackingWheel> horizontals;
-        std::vector<TrackingWheel> drivetrain;
+        std::vector<std::shared_ptr<TrackingWheel>> verticals;
+        std::vector<std::shared_ptr<TrackingWheel>> horizontals;
+        std::vector<std::shared_ptr<TrackingWheel>> drivetrain;
+        std::vector<std::shared_ptr<GPS>> gps;
         std::vector<std::shared_ptr<Gyro>> gyros;
 };
 } // namespace lemlib
